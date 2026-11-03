@@ -181,6 +181,10 @@ footer{background:#07041a;color:#8fa6b4;text-align:center;padding:30px 0;font-si
     window.openfunnel=window.openfunnel||{q:[],track:function(){this.q.push(['track',arguments])},identify:function(){this.q.push(['identify',arguments])},page:function(){this.q.push(['page',arguments])}};
   </script>
   <script async src="https://openfunnel-production.up.railway.app/of.js" data-key="of_YMrlvSeXFcFfLlFV"></script>
+  <script>
+    // Clique no CTA de compra (saida para o checkout Hotmart). Nome honesto: e clique, nao chegada nem compra. Sem valor monetario.
+    document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[data-cta]');if(a&&window.openfunnel)openfunnel.track('clique_checkout',{cta:(a.textContent||'').trim().slice(0,60)});},true);
+  </script>
 </head>
 <body>
 
