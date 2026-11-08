@@ -185,6 +185,26 @@ footer{background:#07041a;color:#8fa6b4;text-align:center;padding:30px 0;font-si
     // Clique no CTA de compra (saida para o checkout Hotmart). Nome honesto: e clique, nao chegada nem compra. Sem valor monetario.
     document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[data-cta]');if(a&&window.openfunnel)openfunnel.track('clique_checkout',{cta:(a.textContent||'').trim().slice(0,60)});},true);
   </script>
+  <script>
+    // Encaminha os parametros de rastreio da landing (utm_*, src, sck) para o checkout Hotmart.
+    // Sem isso a Hotmart nao registra a origem e a compra chega ao Openfunnel sem atribuicao.
+    (function(){
+      var KEEP=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','src','sck'];
+      var inc=null;
+      try{inc=new URLSearchParams(location.search)}catch(e){return}
+      var out=new URLSearchParams();
+      KEEP.forEach(function(k){var v=inc.get(k);if(v)out.set(k,v)});
+      if(!out.toString())return;
+      function rewrite(scope){
+        (scope||document).querySelectorAll('a[href*="pay.hotmart.com/"]').forEach(function(a){
+          try{var u=new URL(a.href);out.forEach(function(v,k){u.searchParams.set(k,v)});a.href=u.toString()}catch(e){}
+        });
+      }
+      if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){rewrite()})}else{rewrite()}
+      // Seguranca extra: reescreve no clique (fase de captura, antes da navegacao) caso algo recrie os links.
+      document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="pay.hotmart.com/"]');if(a){try{var u=new URL(a.href);out.forEach(function(v,k){u.searchParams.set(k,v)});a.href=u.toString()}catch(err){}}},true);
+    })();
+  </script>
 </head>
 <body>
 
