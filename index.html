@@ -186,23 +186,31 @@ footer{background:#07041a;color:#8fa6b4;text-align:center;padding:30px 0;font-si
     document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[data-cta]');if(a&&window.openfunnel)openfunnel.track('clique_checkout',{cta:(a.textContent||'').trim().slice(0,60)});},true);
   </script>
   <script>
-    // Encaminha os parametros de rastreio da landing (utm_*, src, sck) para o checkout Hotmart.
-    // Sem isso a Hotmart nao registra a origem e a compra chega ao Openfunnel sem atribuicao.
+    // Preserva as UTMs e adiciona a identidade real do Openfunnel ao SCK.
+    // SCK identifica o visitante; nao significa chegada ao checkout nem compra.
     (function(){
-      var KEEP=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','src','sck'];
-      var inc=null;
+      var KEEP=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','src'];
+      var inc;
       try{inc=new URLSearchParams(location.search)}catch(e){return}
       var out=new URLSearchParams();
       KEEP.forEach(function(k){var v=inc.get(k);if(v)out.set(k,v)});
-      if(!out.toString())return;
-      function rewrite(scope){
-        (scope||document).querySelectorAll('a[href*="pay.hotmart.com/"]').forEach(function(a){
-          try{var u=new URL(a.href);out.forEach(function(v,k){u.searchParams.set(k,v)});a.href=u.toString()}catch(e){}
-        });
+      function prepare(a){
+        try{
+          var u=new URL(a.href);
+          if(u.hostname!=='pay.hotmart.com')return;
+          out.forEach(function(v,k){u.searchParams.set(k,v)});
+          var sdk=window.openfunnel;
+          var id=sdk&&typeof sdk.visitorId==='function'?sdk.visitorId():null;
+          if(typeof id==='string'&&/^[A-Za-z0-9_-]{4,64}$/.test(id))u.searchParams.set('sck','of_vid:'+id);
+          a.href=u.toString();
+        }catch(e){}
       }
-      if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){rewrite()})}else{rewrite()}
-      // Seguranca extra: reescreve no clique (fase de captura, antes da navegacao) caso algo recrie os links.
-      document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="pay.hotmart.com/"]');if(a){try{var u=new URL(a.href);out.forEach(function(v,k){u.searchParams.set(k,v)});a.href=u.toString()}catch(err){}}},true);
+      function rewrite(){document.querySelectorAll('a[data-cta]').forEach(prepare)}
+      if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',rewrite);else rewrite();
+      // O SDK e assincrono: cobre tanto carregamento cedo como tardio.
+      var loader=document.querySelector('script[src="https://openfunnel-production.up.railway.app/of.js"]');
+      if(loader)loader.addEventListener('load',rewrite);
+      document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[data-cta]');if(a)prepare(a)},true);
     })();
   </script>
 </head>
